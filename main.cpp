@@ -1,6 +1,9 @@
+#define _USE_MATH_DEFINES
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cmath>
 
 // GLEW 
 #define GLEW_STATIC 
@@ -9,6 +12,7 @@
 // GLFW 
 #include <GLFW/glfw3.h> 
 
+const int NUM_VERTS = 50;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
@@ -38,19 +42,50 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    // vertex data
-    float outer_vertices[] = {
-            0.0, 0.0, 0, 1.0, 1.0, 1.0,
-            0.0, -0.9, 0, 1.0, 0.0, 0.0,
-            -0.7, -0.7, 0, 0.625, 0.375, 0.7,
-            -0.9, 0.0, 0, 0.25, 0.75, 0.7,
-            -0.7, 0.7, 0, 0.0, .875, 0.125,
-            0.0, 0.9, 0, 0.0, 0.5, 0.5,
-            0.7, 0.7, 0, 0.0, 0.125, 0.875,
-            0.9, 0.0, 0, 0.25, 0.0, 0.75,
-            0.7, -0.7, 0, 0.625, 0.0, 0.375,
-    };
-    unsigned int indices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 1 };
+    // outer vertices calculation
+    float outer_vertices[6 * (NUM_VERTS + 1)] = { 0 };
+    for (int i = 1; i < NUM_VERTS + 1; i++) {
+        // positioned around a circle
+        float theta = 2 * M_PI * (i - 1) / NUM_VERTS;
+        outer_vertices[6 * i] = sin(theta) * 0.9;
+        outer_vertices[6 * i + 1] = cos(theta) * 0.9;
+        // color progreses from r -> g -> b depending on theta
+        if (theta < 2 * M_PI / 3) {
+            float part = theta / (2 * M_PI / 3);
+            outer_vertices[6 * i + 3] = 1 - theta / (2 * M_PI / 3);
+            outer_vertices[6 * i + 4] = theta / (2 * M_PI / 3);
+        }
+        else if (theta < 4 * M_PI / 3) {
+            float part = (theta - 2 * M_PI / 3) / (2 * M_PI / 3);
+            outer_vertices[6 * i + 4] = 1 - part;
+            outer_vertices[6 * i + 5] = part;
+        }
+        else {
+            float part = (theta - 4 * M_PI / 3) / (2 * M_PI / 3);
+            outer_vertices[6 * i + 5] = 1 - part;
+            outer_vertices[6 * i + 3] = part;
+        }
+    }
+    outer_vertices[3] = 1.0;
+    outer_vertices[4] = 1.0;
+    outer_vertices[5] = 1.0;
+
+    // inner vertices calculation
+    float inner_vertices[6 * (NUM_VERTS + 1)] = { 0 };
+    for (int i = 1; i < NUM_VERTS + 1; i++) {
+        // same as outer vertices but smaller circle
+        float theta = 2 * M_PI * (i - 1) / NUM_VERTS;
+        inner_vertices[6 * i] = sin(theta) * 0.4;
+        inner_vertices[6 * i + 1] = cos(theta) * 0.4;
+    }
+
+    // indices for EBO
+    // [ 0, 1, 2, .. NUM_VERTS, 1 ] to match gl_triangle_fan
+    unsigned int indices[NUM_VERTS + 2] = {0};
+    for (int i = 1; i < NUM_VERTS + 1; i++) {
+        indices[i] = i;
+    }
+    indices[NUM_VERTS + 1] = 1;
 
     // generate buffers
     unsigned int VAO, VBO, EBO;
@@ -143,16 +178,22 @@ int main(int argc, char* argv[]) {
         // clear to black
         glClearColor(0.0f, 0.0f, 0.0f, 0.1f);
         glClear(GL_COLOR_BUFFER_BIT);
-
-        // copy data to buffers
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(outer_vertices), outer_vertices, GL_STATIC_DRAW);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
         
-        // bind vao and draw
+        // bind vao and set
         glBindVertexArray(VAO);
         glBindVertexBuffer(0, VBO, 0, 6 * sizeof(float));
-        glDrawElements(GL_TRIANGLE_FAN, 10, GL_UNSIGNED_INT, 0);
+
+        // set ebo index data
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+        // buffer and draw outer circle
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(outer_vertices), outer_vertices, GL_STATIC_DRAW);
+        glDrawElements(GL_TRIANGLE_FAN, NUM_VERTS + 2, GL_UNSIGNED_INT, 0);
+
+        // buffer and draw inner circle (VBO already bound)
+        glBufferData(GL_ARRAY_BUFFER, sizeof(inner_vertices), inner_vertices, GL_STATIC_DRAW);
+        glDrawElements(GL_TRIANGLE_FAN, NUM_VERTS + 2, GL_UNSIGNED_INT, 0);
 
         // poll events and swap buffers
         glfwPollEvents();
