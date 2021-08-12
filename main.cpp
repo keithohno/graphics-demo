@@ -5,12 +5,11 @@
 #include <sstream>
 #include <cmath>
 
-// GLEW 
-#define GLEW_STATIC 
-#include <GL/glew.h> 
+#define GLEW_STATIC
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 
-// GLFW 
-#include <GLFW/glfw3.h> 
+#include "shader.h"
 
 const int NUM_VERTS = 50;
 
@@ -106,65 +105,8 @@ int main(int argc, char* argv[]) {
     glEnableVertexAttribArray(1);
 
     // SHADER START
-
-    // read shader code from files
-    std::ifstream frag_ifs("C:\\Users\\keith\\source\\repos\\graphics-demo\\Debug\\shaders\\frag_shader.glsl");
-    std::ifstream vert_ifs("C:\\Users\\keith\\source\\repos\\graphics-demo\\Debug\\shaders\\vert_shader.glsl");
-
-    // check that shader files were found
-    if (!frag_ifs || !vert_ifs) {
-        std::cout << "frag shader found: " << (bool)frag_ifs << std::endl;
-        std::cout << "vert shader found: " << (bool)vert_ifs << std::endl;
-        return -1;
-    }
-
-    // read shader code to strings
-    std::stringstream buf;
-    buf << frag_ifs.rdbuf();
-    std::string frag_shader_str = buf.str();
-    char const* frag_shader_source = frag_shader_str.c_str();
-    buf.str("");
-    buf.clear();
-    buf << vert_ifs.rdbuf();
-    std::string vert_shader_str = buf.str();
-    char const* vert_shader_source = vert_shader_str.c_str();
-
-    // compile shaders
-    unsigned int frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(frag_shader, 1, &frag_shader_source, NULL);
-    glCompileShader(frag_shader);
-    unsigned int vert_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vert_shader, 1, &vert_shader_source, NULL);
-    glCompileShader(vert_shader);
-
-    // create shader program object
-    unsigned int shader_program = glCreateProgram();
-    glAttachShader(shader_program, frag_shader);
-    glAttachShader(shader_program, vert_shader);
-    glLinkProgram(shader_program);
-
-    // check errors
-    int success;
-    char log[512];
-    glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(vert_shader, 512, NULL, log);
-        std::cout << "[ERROR] Failed to compile frag shader: " << log << std::endl;
-    }
-    glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(frag_shader, 512, NULL, log);
-        std::cout << "[ERROR] Failed to compile vert shader: " << log << std::endl;
-    }
-
-    // delete old vert/frag shaders
-    glDeleteShader(frag_shader);
-    glDeleteShader(vert_shader);
-
-    // use shaders
-    glUseProgram(shader_program);
-
-    // SHADER END
+    Shader shader = Shader("Debug\\shaders\\vert_shader.glsl", "Debug\\shaders\\frag_shader.glsl");
+    shader.use();
 
     glViewport(0, 0, 800, 600);
 
