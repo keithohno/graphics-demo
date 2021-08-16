@@ -59,5 +59,4 @@ Shader::Shader(std::string vert_file, std::string frag_file) {
 	// use shaders
 	glUseProgram(shader_program);
 
-	// SHADER END
 }
